@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+{% block title %}Tickets{% endblock %}
+
+{% block content %}
+    <h1>All Tickets</h1>
+    <table class="log-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Subject</th>
+                <th>Status</th>
+                <th>Last Updated</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ticket in tickets %}
+            <tr>
+                <td><a href="{{ url_for('ticket_details', ticket_id=ticket.id) }}">#{{ ticket.id }}</a></td>
+                <td>{{ ticket.subject }}</td>
+                <td>{{ ticket.status }}</td>
+                <td>{{ ticket.updated_at }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align: center;">No tickets found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

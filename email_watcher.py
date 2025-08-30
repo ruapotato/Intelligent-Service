@@ -1,0 +1,97 @@
+import imap_tools
+import re
+import os
+import sys
+import getpass
+from datetime import datetime
+from imap_tools import MailBox, A
+
+try:
+    from sqlcipher3 import dbapi2 as sqlite3
+except ImportError:
+    sys.exit("Error: sqlcipher3-wheels is not installed. Please install it using: pip install sqlcipher3-wheels")
+
+
+DB_FILE = "tickets.db"
+
+# Standalone DB connection function for scripts
+def get_script_db_connection(password):
+    if not password: raise ValueError("A database password is required.")
+    con = sqlite3.connect(DB_FILE, timeout=10)
+    con.execute(f"PRAGMA key = '{password}';")
+    con.row_factory = sqlite3.Row
+    return con
+
+def get_creds_from_db(db_password):
+    """Reads credentials from the encrypted database."""
+    try:
+        with get_script_db_connection(db_password) as con:
+            cur = con.cursor()
+            cur.execute("SELECT api_key, api_endpoint FROM api_keys WHERE service = 'imap'")
+            creds = cur.fetchone()
+            if not creds:
+                raise ValueError("IMAP credentials not found in the database.")
+            imap_user, imap_password = creds['api_key'].split(":", 1)
+            return creds['api_endpoint'], imap_user, imap_password
+    except sqlite3.Error as e:
+        sys.exit(f"Database error while fetching credentials: {e}. Is the password correct?")
+
+def process_new_emails(db_password):
+    """
+    Connects to the mailbox, fetches unread emails, and creates or updates tickets.
+    """
+    imap_server, imap_user, imap_password = get_creds_from_db(db_password)
+    print(f"[*] Connecting to mailbox for {imap_user}...")
+
+    try:
+        with MailBox(imap_server).login(imap_user, imap_password) as mailbox:
+            found_emails = False
+            for msg in mailbox.fetch(A(seen=False), limit=10):
+                found_emails = True
+                print("\n--- NEW EMAIL FOUND ---")
+                print(f"  From:    {msg.from_}")
+                print(f"  Subject: {msg.subject}")
+                print(f"  Date:    {msg.date_str}")
+                print("-----------------------")
+
+                ticket_id_match = re.search(r'\[Ticket #(\d+)\]', msg.subject)
+
+                with get_script_db_connection(db_password) as con:
+                    if ticket_id_match:
+                        ticket_id = int(ticket_id_match.group(1))
+                        con.execute("INSERT INTO ticket_replies (ticket_id, content, created_at) VALUES (?, ?, ?)",
+                                   (ticket_id, msg.text or msg.html, msg.date.isoformat()))
+                        con.commit()
+                        print(f"  -> Added reply to ticket #{ticket_id}")
+                    else:
+                        now = datetime.now().isoformat()
+                        cur = con.cursor()
+                        cur.execute("INSERT INTO tickets (subject, created_at, updated_at) VALUES (?, ?, ?)",
+                                     (msg.subject, now, now))
+                        new_ticket_id = cur.lastrowid
+                        con.execute("INSERT INTO ticket_replies (ticket_id, content, created_at) VALUES (?, ?, ?)",
+                                   (new_ticket_id, msg.text or msg.html, msg.date.isoformat()))
+                        new_subject = f"[Ticket #{new_ticket_id}] {msg.subject}"
+                        con.execute("UPDATE tickets SET subject = ? WHERE id = ?", (new_subject, new_ticket_id))
+                        con.commit()
+                        print(f"  -> Created new ticket #{new_ticket_id}")
+
+            if found_emails:
+                print("\n[*] Email processing complete. Found emails were marked as read.")
+            else:
+                print("\n[+] No unread emails found.")
+
+    except Exception as e:
+        print(f"\n[!] An error occurred during email processing: {e}")
+
+
+if __name__ == "__main__":
+    DB_MASTER_PASSWORD = os.environ.get('DB_MASTER_PASSWORD')
+    if not DB_MASTER_PASSWORD:
+        try:
+            DB_MASTER_PASSWORD = getpass.getpass("Please enter the database password: ")
+        except (getpass.GetPassWarning, NameError):
+             DB_MASTER_PASSWORD = input("Please enter the database password: ")
+    if not DB_MASTER_PASSWORD:
+        sys.exit("FATAL: No database password provided. Aborting.")
+    process_new_emails(DB_MASTER_PASSWORD)

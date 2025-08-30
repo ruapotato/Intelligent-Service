@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+    <h1>Settings & Activity</h1>
+
+    <h2>Background Job Status</h2>
+    <table class="log-table">
+        <thead>
+            <tr>
+                <th>Job Name</th>
+                <th>Schedule (Minutes)</th>
+                <th>Last Run</th>
+                <th>Last Status</th>
+                <th>Log</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs %}
+            <tr>
+                <td>{{ job.job_name }}</td>
+                <td>{{ job.interval_minutes }}</td>
+                <td>{{ job.last_run or 'Never' }}</td>
+                <td style="font-weight: bold; color: {{ 'green' if job.last_status == 'Success' else '#dc3545' }}">{{ job.last_status or 'N/A' }}</td>
+                <td>
+                    {% if job.last_run_log %}
+                    <details>
+                        <summary>View Log</summary>
+                        <pre class="audit-details">{{ job.last_run_log }}</pre>
+                    </details>
+                    {% else %}
+                    No log available
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align: center;">No scheduled jobs found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

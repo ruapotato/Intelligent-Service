@@ -1,0 +1,74 @@
+{% extends "layout.html" %}
+{% block title %}Ticket #{{ ticket.id }}{% endblock %}
+
+{% block content %}
+    <h1>{{ ticket.subject }}</h1>
+    <div class="ticket-details">
+        <p><strong>Status:</strong> {{ ticket.status }}</p>
+        <p><strong>Created:</strong> {{ ticket.created_at }}</p>
+    </div>
+
+    <div class="replies-section">
+        <h2>Replies</h2>
+        {% for reply in replies %}
+            <div class="reply">
+                <p class="reply-meta">Reply from {{ reply.author_id or 'Client' }} on {{ reply.created_at }}</p>
+                <div class="reply-content">
+                    {{ reply.content }}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="reply-form">
+        <h2>Add a Reply</h2>
+        <form method="POST" action="{{ url_for('add_reply', ticket_id=ticket.id) }}">
+            <textarea name="content" rows="5" placeholder="Type your reply here..."></textarea>
+            <button type="submit">Add Reply</button>
+        </form>
+    </div>
+
+    <div class="ai-tools">
+        <h2>AI Tools</h2>
+        <button id="summarize-btn">Summarize Ticket</button>
+        <button id="sanitize-btn">Sanitize for Export</button>
+        <div id="ai-output"></div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const summarizeBtn = document.getElementById('summarize-btn');
+    const sanitizeBtn = document.getElementById('sanitize-btn');
+    const aiOutput = document.getElementById('ai-output');
+
+    summarizeBtn.addEventListener('click', function() {
+        const ticketContent = Array.from(document.querySelectorAll('.reply-content')).map(el => el.innerText).join('\\n\\n');
+        fetch('/summarize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: ticketContent })
+        }).then(res => res.json()).then(data => {
+            aiOutput.innerHTML = `<h3>Summary:</h3><p>${data.summary}</p>`;
+        });
+    });
+
+    sanitizeBtn.addEventListener('click', function() {
+        const ticketContent = Array.from(document.querySelectorAll('.reply-content')).map(el => el.innerText).join('\\n\\n');
+        fetch('/sanitize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: ticketContent })
+        }).then(res => res.json()).then(data => {
+            aiOutput.innerHTML = `<h3>Sanitized Text:</h3><textarea rows="10" readonly>${data.sanitized}</textarea><button onclick="copyToClipboard()">Copy</button>`;
+        });
+    });
+});
+
+function copyToClipboard() {
+    const textarea = document.querySelector('#ai-output textarea');
+    textarea.select();
+    document.execCommand('copy');
+    alert('Copied to clipboard!');
+}
+</script>
+{% endblock %}

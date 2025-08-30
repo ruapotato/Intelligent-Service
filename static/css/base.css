@@ -1,0 +1,107 @@
+:root {
+    --primary-color: #D4AF37; /* Gold */
+    --primary-hover: #b89b3c;
+    --secondary-color: #353C47;
+    --header-text-color: #353C47;
+    --background-color: #f4f6f8;
+    --text-color: #212529;
+    --card-bg: #ffffff;
+    --table-border-color: #ced4da;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    margin: 0;
+    padding-top: 60px; /* Space for navbar */
+}
+
+.navbar {
+    background-color: var(--secondary-color);
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+.navbar a {
+    float: left;
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+
+.navbar a:hover {
+    background-color: var(--primary-hover);
+}
+
+
+.container {
+    max-width: 900px;
+    margin: 20px auto;
+    background-color: var(--card-bg);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+    text-align: center;
+}
+
+h1, h2 {
+    color: var(--header-text-color);
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 10px;
+}
+
+.log-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.log-table th, .log-table td {
+    border: 1px solid var(--table-border-color);
+    padding: 12px;
+    text-align: left;
+}
+
+.reply {
+    border: 1px solid var(--table-border-color);
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+}
+
+.reply-meta {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-bottom: 10px;
+}
+
+.ai-tools {
+    margin-top: 30px;
+    padding: 20px;
+    border: 1px solid var(--table-border-color);
+    border-radius: 5px;
+}
+
+.audit-details {
+    margin-top: 10px;
+    background-color: #2a2a40;
+    color: #e0e0ff;
+    padding: 15px;
+    border-radius: 5px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: 'Courier New', Courier, monospace;
+    max-height: 300px;
+    overflow-y: auto;
+}
