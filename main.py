@@ -111,8 +111,13 @@ def tickets_list():
 @app.route('/ticket/<int:ticket_id>')
 def ticket_details(ticket_id):
     ticket = query_db("SELECT t.*, c.name as company_name, u.username as user_username FROM tickets t JOIN companies c ON t.company_id = c.id JOIN users u ON t.user_id = u.id WHERE t.id = ?", [ticket_id], one=True)
-    company_notes = query_db("SELECT content FROM company_notes WHERE company_id = ?", [ticket['company_id']])
-    user_notes = query_db("SELECT content FROM user_notes WHERE user_id = ?", [ticket['user_id']])
+    company_notes_rows = query_db("SELECT content FROM company_notes WHERE company_id = ?", [ticket['company_id']])
+    user_notes_rows = query_db("SELECT content FROM user_notes WHERE user_id = ?", [ticket['user_id']])
+    
+    # Convert Row objects to dictionaries
+    company_notes = [dict(row) for row in company_notes_rows]
+    user_notes = [dict(row) for row in user_notes_rows]
+
     replies = query_db("SELECT r.*, u.username as author_name FROM ticket_replies r LEFT JOIN users u ON r.author_id = u.id WHERE r.ticket_id = ? ORDER BY r.created_at ASC", [ticket_id])
     return render_template('ticket_details.html', ticket=ticket, replies=replies, company_notes=company_notes, user_notes=user_notes)
 
