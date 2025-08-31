@@ -6,7 +6,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.security import generate_password_hash, check_password_hash
 from database import init_app_db, get_db, query_db, execute_db, get_db_connection
 from scheduler import run_job
-from ai_processing import summarize_text, sanitize_text
+from ai_processing import summarize_text, sanitize_text, chat_with_context
 
 # --- App Configuration ---
 app = Flask(__name__)
@@ -267,14 +267,7 @@ def delete_user_note(note_id):
 @app.route('/summarize', methods=['POST'])
 def summarize():
     text = request.json.get('text')
-    company_notes_list = request.json.get('company_notes', [])
-    user_notes_list = request.json.get('user_notes', [])
-
-    company_notes = "\n".join(note['content'] for note in company_notes_list)
-    user_notes = "\n".join(note['content'] for note in user_notes_list)
-
-    full_context = f"COMPANY CONTEXT:\n{company_notes}\n\nUSER CONTEXT:\n{user_notes}\n\nTICKET CONTENT:\n{text}"
-    summary = summarize_text(full_context)
+    summary = summarize_text(text)
     return jsonify({'summary': summary})
 
 @app.route('/sanitize', methods=['POST'])
@@ -282,6 +275,13 @@ def sanitize():
     text = request.json.get('text')
     sanitized = sanitize_text(text)
     return jsonify({'sanitized': sanitized})
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    context = request.json.get('context')
+    question = request.json.get('question')
+    response = chat_with_context(context, question)
+    return jsonify({'response': response})
 
 if __name__ == '__main__':
     if not os.path.exists(DATABASE):

@@ -37,31 +37,55 @@
         <button id="summarize-btn">Summarize Ticket</button>
         <button id="sanitize-btn">Sanitize for Export</button>
         <div id="ai-output"></div>
+        <hr>
+        <h3>Full Context (for AI)</h3>
+        <pre class="audit-details" id="full-context-display"></pre>
     </div>
+
+    <div class="chat-container">
+        <h2>AI Chat</h2>
+        <div id="chat-box"></div>
+        <input type="text" id="chat-input" placeholder="Ask a question about this ticket...">
+        <button id="chat-send">Send</button>
+    </div>
+
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const summarizeBtn = document.getElementById('summarize-btn');
     const sanitizeBtn = document.getElementById('sanitize-btn');
     const aiOutput = document.getElementById('ai-output');
+    const fullContextDisplay = document.getElementById('full-context-display');
     
-    // Safely parse JSON from the template
-    const companyNotes = JSON.parse('{{ company_notes | tojson | safe }}');
-    const userNotes = JSON.parse('{{ user_notes | tojson | safe }}');
+    const companyNotes = {{ company_notes | tojson }};
+    const userNotes = {{ user_notes | tojson }};
+
+    function getTicketText() {
+        return Array.from(document.querySelectorAll('.reply-content')).map(el => el.innerText).join('\n\n');
+    }
+
+    function getFullContext() {
+        const ticketContent = getTicketText();
+        const companyNotesText = companyNotes.map(note => note.content).join('\n');
+        const userNotesText = userNotes.map(note => note.content).join('\n');
+        return `COMPANY CONTEXT:\n${companyNotesText}\n\nUSER CONTEXT:\n${userNotesText}\n\nTICKET CONTENT:\n${ticketContent}`;
+    }
+
+    fullContextDisplay.textContent = getFullContext();
 
     summarizeBtn.addEventListener('click', function() {
-        const ticketContent = Array.from(document.querySelectorAll('.reply-content')).map(el => el.innerText).join('\\n\\n');
+        const fullContext = getFullContext();
         fetch('/summarize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: ticketContent, company_notes: companyNotes, user_notes: userNotes })
+            body: JSON.stringify({ text: fullContext })
         }).then(res => res.json()).then(data => {
             aiOutput.innerHTML = `<h3>Summary:</h3><p>${data.summary}</p>`;
         });
     });
 
     sanitizeBtn.addEventListener('click', function() {
-        const ticketContent = Array.from(document.querySelectorAll('.reply-content')).map(el => el.innerText).join('\\n\\n');
+        const ticketContent = getTicketText();
         fetch('/sanitize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -70,6 +94,35 @@ document.addEventListener('DOMContentLoaded', function() {
             aiOutput.innerHTML = `<h3>Sanitized Text:</h3><textarea rows="10" readonly>${data.sanitized}</textarea><button onclick="copyToClipboard()">Copy</button>`;
         });
     });
+
+    const chatBox = document.getElementById('chat-box');
+    const chatInput = document.getElementById('chat-input');
+    const chatSendBtn = document.getElementById('chat-send');
+
+    chatSendBtn.addEventListener('click', function() {
+        const userMessage = chatInput.value;
+        if (!userMessage) return;
+
+        appendMessage('You', userMessage);
+        chatInput.value = '';
+
+        const fullContext = getFullContext();
+
+        fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ context: fullContext, question: userMessage })
+        }).then(res => res.json()).then(data => {
+            appendMessage('AI', data.response);
+        });
+    });
+
+    function appendMessage(sender, message) {
+        const messageElement = document.createElement('div');
+        messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;
+        chatBox.appendChild(messageElement);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
 });
 
 function copyToClipboard() {

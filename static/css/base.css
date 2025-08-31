@@ -138,3 +138,39 @@ h1, h2 {
 .btn:hover {
     background-color: var(--primary-hover);
 }
+
+.chat-container {
+    margin-top: 30px;
+    padding: 20px;
+    border: 1px solid var(--table-border-color);
+    border-radius: 5px;
+}
+
+#chat-box {
+    height: 300px;
+    overflow-y: scroll;
+    border: 1px solid var(--table-border-color);
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+#chat-input {
+    width: calc(100% - 80px);
+    padding: 10px;
+    border: 1px solid var(--table-border-color);
+    border-radius: 4px;
+}
+
+#chat-send {
+    width: 70px;
+    padding: 10px;
+    border: none;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#chat-send:hover {
+    background-color: var(--primary-hover);
+}

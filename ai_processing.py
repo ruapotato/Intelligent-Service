@@ -78,3 +78,26 @@ def sanitize_text(text):
         return sanitized_text
     except requests.exceptions.RequestException as e:
         return f"Error communicating with Ollama: {e}"
+
+def chat_with_context(context, question):
+    """Answers a question based on the provided context using the Ollama Mistral model."""
+    endpoint = get_endpoint()
+    if not endpoint:
+        return "Ollama endpoint not configured."
+
+    prompt = f"Based on the following context, answer the user's question.\n\nContext:\n{context}\n\nQuestion: {question}"
+    try:
+        response = requests.post(
+            f"{endpoint}/api/generate",
+            json={"model": "mistral", "prompt": prompt},
+            stream=True
+        )
+        response.raise_for_status()
+        answer = ""
+        for line in response.iter_lines():
+            if line:
+                decoded_line = json.loads(line.decode('utf-8'))
+                answer += decoded_line.get("response", "")
+        return answer
+    except requests.exceptions.RequestException as e:
+        return f"Error communicating with Ollama: {e}"
