@@ -4,6 +4,12 @@
 {% block content %}
     <h1>Settings & Activity</h1>
 
+    <h2>Management</h2>
+    <ul>
+        <li><a href="{{ url_for('list_users') }}">Manage Users</a></li>
+        <li><a href="{{ url_for('list_companies') }}">Manage Companies</a></li>
+    </ul>
+
     <h2>Background Job Status</h2>
     <table class="log-table">
         <thead>

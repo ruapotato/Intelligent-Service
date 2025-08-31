@@ -8,6 +8,8 @@
             <tr>
                 <th>ID</th>
                 <th>Subject</th>
+                <th>Company</th>
+                <th>User</th>
                 <th>Status</th>
                 <th>Last Updated</th>
             </tr>
@@ -17,12 +19,14 @@
             <tr>
                 <td><a href="{{ url_for('ticket_details', ticket_id=ticket.id) }}">#{{ ticket.id }}</a></td>
                 <td>{{ ticket.subject }}</td>
+                <td>{{ ticket.company_name }}</td>
+                <td>{{ ticket.user_username }}</td>
                 <td>{{ ticket.status }}</td>
                 <td>{{ ticket.updated_at }}</td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="4" style="text-align: center;">No tickets found.</td>
+                <td colspan="6" style="text-align: center;">No tickets found.</td>
             </tr>
             {% endfor %}
         </tbody>

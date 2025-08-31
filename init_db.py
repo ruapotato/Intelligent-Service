@@ -3,6 +3,8 @@ import os
 import getpass
 import time
 import shutil
+from werkzeug.security import generate_password_hash
+from datetime import datetime
 
 try:
     from sqlcipher3 import dbapi2 as sqlite3
@@ -60,12 +62,23 @@ def create_database(password, imported_keys=None):
 
     print("\n[*] Creating new database schema...")
     # --- Schema Definition ---
+    cur.execute("CREATE TABLE IF NOT EXISTS companies (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE)")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'Client', company_id INTEGER NOT NULL,
+            FOREIGN KEY (company_id) REFERENCES companies (id)
+        )
+    """)
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS tickets (
             id INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Open',
             priority TEXT NOT NULL DEFAULT 'Low', created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
-            client_id INTEGER, assigned_to INTEGER, summary TEXT,
-            FOREIGN KEY (client_id) REFERENCES clients (id), FOREIGN KEY (assigned_to) REFERENCES app_users (id)
+            company_id INTEGER, user_id INTEGER, assigned_to_id INTEGER, summary TEXT,
+            FOREIGN KEY (company_id) REFERENCES companies (id), FOREIGN KEY (user_id) REFERENCES users (id),
+            FOREIGN KEY (assigned_to_id) REFERENCES users (id)
         )
     """)
     cur.execute("""
@@ -73,11 +86,13 @@ def create_database(password, imported_keys=None):
             id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INTEGER NOT NULL, author_id INTEGER,
             content TEXT NOT NULL, created_at TEXT NOT NULL, is_internal_note BOOLEAN DEFAULT 0,
             FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE,
-            FOREIGN KEY (author_id) REFERENCES app_users (id)
+            FOREIGN KEY (author_id) REFERENCES users (id)
         )
     """)
-    cur.execute("CREATE TABLE IF NOT EXISTS clients (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, email TEXT, phone TEXT)")
-    cur.execute("CREATE TABLE IF NOT EXISTS app_users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, role TEXT NOT NULL DEFAULT 'Technician')")
+
+    cur.execute("CREATE TABLE IF NOT EXISTS company_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, company_id INTEGER NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY (company_id) REFERENCES companies (id) ON DELETE CASCADE)")
+    cur.execute("CREATE TABLE IF NOT EXISTS user_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE)")
+
     cur.execute("CREATE TABLE IF NOT EXISTS api_keys (service TEXT PRIMARY KEY, api_key TEXT, api_endpoint TEXT)")
     cur.execute("""
         CREATE TABLE scheduler_jobs (
@@ -90,19 +105,25 @@ def create_database(password, imported_keys=None):
 
     # --- Data Population ---
     print("\n[*] Populating with default data...")
-    default_users = [('Admin', 'Admin'), ('David Hamner', 'Admin')]
-    cur.executemany("INSERT INTO app_users (username, role) VALUES (?, ?)", default_users)
-    print("    - Populated default users.")
+    # Default companies
+    cur.execute("INSERT INTO companies (name) VALUES (?)", ('Unknown',))
+    cur.execute("INSERT INTO companies (name) VALUES (?)", ('Internal',))
+    internal_company_id = cur.lastrowid
+    print("    - Populated default companies.")
 
-    # --- THIS IS THE FIX ---
-    default_clients = [('Default Client', 'billing@example.com', '555-123-4567')]
-    cur.executemany("INSERT INTO clients (name, email, phone) VALUES (?, ?, ?)", default_clients)
-    # --- END OF FIX ---
+    # Default users
+    admin_pass_hash = generate_password_hash('admin')
+    cur.execute("INSERT INTO users (username, email, password_hash, role, company_id) VALUES (?, ?, ?, ?, ?)",
+                ('admin', 'admin@local.host', admin_pass_hash, 'Admin', internal_company_id))
+    print("    - Populated default admin user (login: admin/admin).")
 
-    print("    - Populated default clients.")
+
     default_jobs = [('Email Watcher', 'email_watcher.py', 1, 1)]
     cur.executemany("INSERT INTO scheduler_jobs (job_name, script_path, interval_minutes, enabled) VALUES (?, ?, ?, ?)", default_jobs)
     print("    - Populated default scheduler jobs.")
+
+    cur.execute("INSERT INTO company_notes (company_id, content, created_at) VALUES (?, ?, ?)", (1, 'Default company for new, unrecognized emails.', datetime.now().isoformat()))
+
 
     if imported_keys:
         print("[*] Importing existing API keys...")

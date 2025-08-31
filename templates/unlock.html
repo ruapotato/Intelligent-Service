@@ -1,11 +1,11 @@
 {% extends "layout.html" %}
-{% block title %}Login{% endblock %}
+{% block title %}Unlock Database{% endblock %}
 
 {% block content %}
 <div class="login-container">
     <h1>Unlock Database</h1>
     <p>Enter the master password to access the ticketing system.</p>
-    <form method="POST" action="{{ url_for('login') }}">
+    <form method="POST" action="{{ url_for('unlock_db') }}">
         <input type="password" name="password" placeholder="Master Password" required>
         <button type="submit">Unlock</button>
     </form>

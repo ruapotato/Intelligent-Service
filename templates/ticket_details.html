@@ -4,6 +4,8 @@
 {% block content %}
     <h1>{{ ticket.subject }}</h1>
     <div class="ticket-details">
+        <p><strong>Company:</strong> <a href="{{ url_for('edit_company', company_id=ticket.company_id) }}">{{ ticket.company_name }}</a></p>
+        <p><strong>User:</strong> <a href="{{ url_for('edit_user', user_id=ticket.user_id) }}">{{ ticket.user_username }}</a></p>
         <p><strong>Status:</strong> {{ ticket.status }}</p>
         <p><strong>Created:</strong> {{ ticket.created_at }}</p>
     </div>
@@ -12,7 +14,7 @@
         <h2>Replies</h2>
         {% for reply in replies %}
             <div class="reply">
-                <p class="reply-meta">Reply from {{ reply.author_id or 'Client' }} on {{ reply.created_at }}</p>
+                <p class="reply-meta">Reply from {{ reply.author_name or 'Client' }} on {{ reply.created_at }}</p>
                 <div class="reply-content">
                     {{ reply.content }}
                 </div>
@@ -20,6 +22,7 @@
         {% endfor %}
     </div>
 
+    {% if current_user.role in ['Admin', 'Technician'] %}
     <div class="reply-form">
         <h2>Add a Reply</h2>
         <form method="POST" action="{{ url_for('add_reply', ticket_id=ticket.id) }}">
@@ -27,6 +30,7 @@
             <button type="submit">Add Reply</button>
         </form>
     </div>
+    {% endif %}
 
     <div class="ai-tools">
         <h2>AI Tools</h2>
@@ -40,13 +44,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const summarizeBtn = document.getElementById('summarize-btn');
     const sanitizeBtn = document.getElementById('sanitize-btn');
     const aiOutput = document.getElementById('ai-output');
+    
+    // Safely parse JSON from the template
+    const companyNotes = JSON.parse('{{ company_notes | tojson | safe }}');
+    const userNotes = JSON.parse('{{ user_notes | tojson | safe }}');
 
     summarizeBtn.addEventListener('click', function() {
         const ticketContent = Array.from(document.querySelectorAll('.reply-content')).map(el => el.innerText).join('\\n\\n');
         fetch('/summarize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: ticketContent })
+            body: JSON.stringify({ text: ticketContent, company_notes: companyNotes, user_notes: userNotes })
         }).then(res => res.json()).then(data => {
             aiOutput.innerHTML = `<h3>Summary:</h3><p>${data.summary}</p>`;
         });

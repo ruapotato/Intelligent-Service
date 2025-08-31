@@ -1,0 +1,78 @@
+{% extends "layout.html" %}
+{% block title %}{{ 'Edit' if user else 'New' }} User{% endblock %}
+
+{% block content %}
+    <h1>{{ 'Edit' if user else 'New' }} User</h1>
+    
+    {% if user %}
+    <h3>Company: <a href="{{ url_for('edit_company', company_id=user.company_id) }}">{{ user.company_name }}</a></h3>
+    {% endif %}
+
+    <form method="POST">
+        <div>
+            <label for="username">Username</label>
+            <input type="text" name="username" id="username" value="{{ user.username if user else '' }}" required>
+        </div>
+        <div>
+            <label for="email">Email</label>
+            <input type="email" name="email" id="email" value="{{ user.email if user else '' }}" required>
+        </div>
+        <div>
+            <label for="password">Password (leave blank to keep current)</label>
+            <input type="password" name="password" id="password" {% if not user %}required{% endif %}>
+        </div>
+        <div>
+            <label for="company_id">Company</label>
+            <select name="company_id" id="company_id" required>
+                {% for company in companies %}
+                <option value="{{ company.id }}" {% if user and user.company_id == company.id %}selected{% endif %}>
+                    {{ company.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="role">Role</label>
+            <select name="role" id="role" required>
+                {% set roles = ['Admin', 'Technician', 'Client'] %}
+                {% for role in roles %}
+                <option value="{{ role }}" {% if user and user.role == role %}selected{% endif %}>{{ role }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn">Save User</button>
+    </form>
+
+    {% if user %}
+    <hr>
+    <h2>Notes (for AI Context)</h2>
+    <form method="POST" action="{{ url_for('add_user_note', user_id=user.id) }}">
+        <textarea name="content" rows="3" placeholder="Add a new note..."></textarea>
+        <button type="submit" class="btn">Add Note</button>
+    </form>
+    <table class="log-table">
+        <thead>
+            <tr>
+                <th>Note</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for note in notes %}
+            <tr>
+                <td>{{ note.content }}</td>
+                <td>{{ note.created_at }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('delete_user_note', note_id=note.id) }}" style="display:inline;">
+                        <button type="submit" class="btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3">No notes found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+{% endblock %}

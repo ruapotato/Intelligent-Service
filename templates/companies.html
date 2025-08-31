@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{% block title %}Companies{% endblock %}
+
+{% block content %}
+    <div class="table-container">
+        <h1>Manage Companies</h1>
+        <a href="{{ url_for('create_company') }}" class="btn">New Company</a>
+    </div>
+    <table class="log-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Notes</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for company in companies %}
+            <tr>
+                <td>{{ company.name }}</td>
+                <td>{{ company.notes }}</td>
+                <td><a href="{{ url_for('edit_company', company_id=company.id) }}">Edit</a></td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3" style="text-align: center;">No companies found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

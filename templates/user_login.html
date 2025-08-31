@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block title %}User Login{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <h1>User Login</h1>
+    <p>Please log in with your user credentials.</p>
+    <form method="POST" action="{{ url_for('user_login') }}">
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+    </form>
+</div>
+{% endblock %}

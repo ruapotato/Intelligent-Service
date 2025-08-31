@@ -57,24 +57,46 @@ def process_new_emails(db_password):
                 ticket_id_match = re.search(r'\[Ticket #(\d+)\]', msg.subject)
 
                 with get_script_db_connection(db_password) as con:
+                    # Find or create the user and company
+                    user_email = msg.from_
+                    user = con.execute("SELECT * FROM users WHERE email = ?", (user_email,)).fetchone()
+                    if not user:
+                        # User doesn't exist, create them in the "Unknown" company
+                        unknown_company = con.execute("SELECT id FROM companies WHERE name = 'Unknown'").fetchone()
+                        if not unknown_company:
+                            # This should not happen if init_db.py is run correctly
+                            sys.exit("FATAL: 'Unknown' company not found in the database.")
+                        
+                        cur = con.cursor()
+                        # *** BUG FIX HERE ***
+                        # Provide a non-null, unusable password hash for new client users.
+                        placeholder_hash = '<no-password-set>'
+                        cur.execute("INSERT INTO users (username, email, company_id, role, password_hash) VALUES (?, ?, ?, ?, ?)",
+                                     (user_email, user_email, unknown_company['id'], 'Client', placeholder_hash))
+                        user_id = cur.lastrowid
+                        con.commit()
+                        user = con.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+                        print(f"  -> Created new user '{user_email}' in 'Unknown' company.")
+
                     if ticket_id_match:
                         ticket_id = int(ticket_id_match.group(1))
-                        con.execute("INSERT INTO ticket_replies (ticket_id, content, created_at) VALUES (?, ?, ?)",
-                                   (ticket_id, msg.text or msg.html, msg.date.isoformat()))
+                        con.execute("INSERT INTO ticket_replies (ticket_id, author_id, content, created_at) VALUES (?, ?, ?, ?)",
+                                   (ticket_id, user['id'], msg.text or msg.html, msg.date.isoformat()))
                         con.commit()
-                        print(f"  -> Added reply to ticket #{ticket_id}")
+                        print(f"  -> Added reply to ticket #{ticket_id} from user {user['username']}")
                     else:
                         now = datetime.now().isoformat()
                         cur = con.cursor()
-                        cur.execute("INSERT INTO tickets (subject, created_at, updated_at) VALUES (?, ?, ?)",
-                                     (msg.subject, now, now))
+                        cur.execute("INSERT INTO tickets (subject, created_at, updated_at, company_id, user_id) VALUES (?, ?, ?, ?, ?)",
+                                     (msg.subject, now, now, user['company_id'], user['id']))
                         new_ticket_id = cur.lastrowid
-                        con.execute("INSERT INTO ticket_replies (ticket_id, content, created_at) VALUES (?, ?, ?)",
-                                   (new_ticket_id, msg.text or msg.html, msg.date.isoformat()))
+                        con.execute("INSERT INTO ticket_replies (ticket_id, author_id, content, created_at) VALUES (?, ?, ?, ?)",
+                                   (new_ticket_id, user['id'], msg.text or msg.html, msg.date.isoformat()))
                         new_subject = f"[Ticket #{new_ticket_id}] {msg.subject}"
                         con.execute("UPDATE tickets SET subject = ? WHERE id = ?", (new_subject, new_ticket_id))
                         con.commit()
-                        print(f"  -> Created new ticket #{new_ticket_id}")
+                        print(f"  -> Created new ticket #{new_ticket_id} for user {user['username']} in company ID {user['company_id']}")
+
 
             if found_emails:
                 print("\n[*] Email processing complete. Found emails were marked as read.")

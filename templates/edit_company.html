@@ -1,0 +1,72 @@
+{% extends "layout.html" %}
+{% block title %}{{ 'Edit' if company else 'New' }} Company{% endblock %}
+
+{% block content %}
+    <h1>{{ 'Edit' if company else 'New' }} Company</h1>
+    <form method="POST">
+        <div>
+            <label for="name">Company Name</label>
+            <input type="text" name="name" id="name" value="{{ company.name if company else '' }}" required>
+        </div>
+        <button type="submit" class="btn">Save Company</button>
+    </form>
+
+    {% if company %}
+    <hr>
+    <h2>Notes (for AI Context)</h2>
+    <form method="POST" action="{{ url_for('add_company_note', company_id=company.id) }}">
+        <textarea name="content" rows="3" placeholder="Add a new note..."></textarea>
+        <button type="submit" class="btn">Add Note</button>
+    </form>
+    <table class="log-table">
+        <thead>
+            <tr>
+                <th>Note</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for note in notes %}
+            <tr>
+                <td>{{ note.content }}</td>
+                <td>{{ note.created_at }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('delete_company_note', note_id=note.id) }}" style="display:inline;">
+                        <button type="submit" class="btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3">No notes found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <hr>
+    <h2>Users</h2>
+    <table class="log-table">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.role }}</td>
+                <td><a href="{{ url_for('edit_user', user_id=user.id) }}">Edit User</a></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4">No users found for this company.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% endif %}
+{% endblock %}
